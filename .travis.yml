@@ -1,0 +1,44 @@
+language: generic
+sudo: required
+services:
+  - docker
+
+before_install:
+  # Create an image with the dev build of our react app (we can't test the prod one as it's an nginx server hosting built assets, it has no npm)
+  - docker build -t ricardosandez/react-test -f ./client/Dockerfile.dev ./client
+
+script:
+  # Run tests for our react app. In case of wanting to test the worker or server, you'd put those scripts here as well after defining them above.
+
+  # Set an env variable 'CI' to true so that 'npm run test' exits immmediately after executing. (See https://create-react-app.dev/docs/running-tests/#continuous-integration)
+  # This must be an env variable in your system, it's not a flag of npm run test.
+  # This is because Travis will not build if the result from running the tests is a code different from 0.
+  - docker run -e CI=true ricardosandez/react-test npm test
+
+after_success:
+  - docker build -t ricardosandez/fib-client ./client
+  - docker build -t ricardosandez/fib-nginx ./nginx
+  - docker build -t ricardosandez/fib-server ./server
+  - docker build -t ricardosandez/fib-worker ./worker
+
+  # Log in to the docker CLI
+  # 'echo "$DOCKER_PASSWORD" |' adds the password to the stdin channel of the second command, which receives the username through the -u flag.
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+
+  # Take those images and push them to docker hub
+  - docker push ricardosandez/fib-client
+  - docker push ricardosandez/fib-nginx
+  - docker push ricardosandez/fib-server
+  - docker push ricardosandez/fib-worker
+
+deploy:
+  provider: elasticbeanstalk
+  region: us-east-1
+  app: Fibonacci Overkill
+  env: Fibonaccioverkill-env
+  bucket_name: elasticbeanstalk-us-east-1-682978925964
+  bucket_path: Fibonacci-Overkill
+  on:
+    branch: main
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key: $AWS_SECRET_KEY

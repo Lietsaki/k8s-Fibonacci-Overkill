@@ -1,0 +1,54 @@
+version: '2'
+services:
+  postgres:
+    image: 'postgres:latest'
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+
+  redis:
+    image: 'redis:latest'
+
+  nginx:
+    restart: always
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - '3050:80' # Map port 3050 in our local machine (no specific reason to choose that one) to port 80 (nginx's default port)
+
+  node_api:
+    build:
+      dockerfile: Dockerfile.dev # Here we only specify the name of the dockerfile. The folder where it sits is specified in 'context'.
+      context: ./server
+    volumes:
+      - /app/node_modules # do not map or modify node_modules in any way.
+      - ./server:/app # map everything else from our local .server dir to the container's /app folder.
+    environment:
+      - REDIS_HOST=redis # Name of our redis service
+      - REDIS_PORT=6379 # Default redis port
+      - PGUSER=postgres
+      - PGHOST=postgres
+      - PGDATABASE=postgres
+      - PGPASSWORD=postgres_password # default postgres password
+      - PGPORT=5432 # default postgres port
+
+  client:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./client
+    volumes:
+      - /home/node/app/node_modules
+      - ./client:/home/node/app
+    environment:
+      - WDS_SOCKET_PORT=0 # set to ws port in order to be able to allow it through nginx
+
+  worker:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      - /app/node_modules
+      - ./worker:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
