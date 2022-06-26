@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: postgres
+  template:
+    metadata:
+      labels:
+        component: postgres
+    spec:
+      volumes: # Specify the volumes we want to have available. claimName must be the same as the PV's metadata.name
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: database-persistent-volume-claim
+      containers:
+        - name: postgres
+          image: postgres
+          ports:
+            - containerPort: 5432 # default postgres port
+          volumeMounts: # Use the following volumes
+            - name: postgres-storage
+              # Path where data would normally be stored in this container. Everything the container writes will actually be written into the volume.
+              mountPath: /var/lib/postgresql/data
+              subPath: postgres # Store all data in the volume inside a folder with this name. This option isn't mandatory but postgres needs it.
+          env:
+            - name: POSTGRES_PASSWORD # Postgres' expected environment variable name
+              valueFrom:
+                secretKeyRef:
+                  name: pgpassword
+                  key: PGPASSWORD

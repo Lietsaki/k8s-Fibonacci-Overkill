@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      component: server
+  template:
+    metadata:
+      labels:
+        component: server
+    spec:
+      containers:
+        - name: server
+          image: ricardosandez/fib-server
+          ports:
+            - containerPort: 5000
+          env:
+            - name: REDIS_HOST
+              value: redis-cluster-ip-service
+            - name: REDIS_PORT
+              value: '6379'
+            - name: PGUSER
+              value: postgres
+            - name: PGHOST
+              value: postgres-cluster-ip-service
+            - name: PGPORT
+              value: '5432' # default postgres port
+            - name: PGDATABASE
+              value: postgres
+            - name: PGPASSWORD # Environment variable name that'll be available to the server
+              valueFrom:
+                secretKeyRef:
+                  name: pgpassword # Use a secret called pgpassword
+                  key: PGPASSWORD # Select the PGPASSWORD key from pgpassword

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: client-cluster-ip-service
+spec:
+  type: ClusterIP
+  # Select the service to expose
+  selector:
+    component: web
+  ports:
+    - port: 3000 # Port other services can access to interact with the exposed port (targetPort)
+      targetPort: 3000 # Port from the target to expose
