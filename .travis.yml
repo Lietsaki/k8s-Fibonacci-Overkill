@@ -1,0 +1,35 @@
+# This is a demo file that simulates a .travis.yml file to deploy our cluster to GKE
+sudo: required
+services:
+  - docker
+env:
+  global:
+    - SHA=$(git rev-parse HEAD)
+    # GC: Do not display any prompts that require user input
+    - CLOUDSDK_CORE_DISABLE_PROMPTS=1
+
+before_install:
+  # Use encrypted service account file
+  # - openssl...
+  # Download the google cloud sdk and install it locally in our Travis CI instance (the one that runs this file)
+  - curl https://sdk.cloud.google.com | bash > /dev/null;
+  # Execute the path.bash.inc file in the current shell script. This is part of the GC sdk installation.
+  - source $HOME/google-cloud-sdk/path.bash.inc
+  # Install kubectl
+  - gcloud components update kubectl
+  # Authenticate with GC
+  - gcloud auth activate-service-account --key-file service-account.json
+  - gcloud config set project PROJECT_ID
+  - gcloud config set compute/zone SELECTED_REGION
+  - gcloud container clusters get-credentials CLUSTER_NAME
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker build -t ricardosandez/fib-k8s-react-test -f ./client/Dockerfile.dev ./client
+
+script:
+  - docker run -e CI=true ricardosandez/fib-k8s-react-test npm test
+
+deploy:
+  provider: script
+  script: bash ./deploy.sh
+  on:
+    branch: main

@@ -1,0 +1,49 @@
+apiVersion: skaffold/v2beta29
+kind: Config
+# List deployments we want skaffold to manage
+build:
+  local:
+    # Skaffold tries to push the image every time it builds it. This overrides that.
+    push: false
+  artifacts:
+    - image: ricardosandez/fib-client
+      context: client # folder to build the image from
+      docker:
+        dockerfile: Dockerfile.dev
+        # Specify which files to sync with the running pods.
+        # This also specifies that we wish to sync certain files instead of rebuilding the whole image. This assumes the container has the ability to reload itself (Weback HMR, Nodemon, etc)
+        # If files that don't match our specs are changed, the whole image will be re-built.
+      sync:
+        manual:
+          - src: 'src/**/*.js'
+            dest: .
+          - src: 'src/**/*.css'
+            dest: .
+          - src: 'src/**/*.html'
+            dest: .
+    - image: ricardosandez/fib-server
+      context: server
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+          - src: 'src/**/*.js'
+            dest: .
+    - image: ricardosandez/fib-worker
+      context: worker
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+          - src: 'src/**/*.js'
+            dest: .
+
+deploy:
+  kubectl:
+    manifests: # Every time we start skaffold, it'll try to run the following files. When stopping it, it'll also shut them down.
+      # - k8s/client-deployment.yaml
+      # - k8s/server-deployment.yaml
+      # - k8s/worker-deployment.yaml
+      # - k8s/client-cluster-ip-service.yaml
+      # - k8s/server-cluster-ip-service.yaml
+      - ./k8s/*

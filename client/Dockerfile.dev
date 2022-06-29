@@ -1,4 +1,5 @@
 FROM node:alpine
+ENV CI=true
 USER node
 RUN mkdir -p /home/node/app
 WORKDIR /home/node/app
